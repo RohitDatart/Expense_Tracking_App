@@ -8,7 +8,8 @@ const addTransaction = async (req, res) => {
     const { type, title, amount, description, category, date } = req.body;
 
     // Find user
-    const user = await User.findOne(userId);
+    const user = await User.findById(userId);
+    
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     // Validate expense balance
