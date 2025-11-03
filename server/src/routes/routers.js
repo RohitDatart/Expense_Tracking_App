@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {create_user, getUser, updateUser, deleteUser, userLogin} = require("../controllers/user_controller");
-const {addTransaction, getTransactions, getSingleTransaction, updateTransaction, deleteTransaction} = require("../controllers/transaction_controller")
+const {addTransaction, getTransactions, getSingleTransaction, updateTransaction, deleteTransaction, getTransactionGraphData} = require("../controllers/transaction_controller")
 
 //User
 router.post('/crate_user', create_user);
@@ -19,5 +19,6 @@ router.get('/allTransactions/:userId', getTransactions );
 router.get('/transaction/:transactionId',getSingleTransaction);
 router.put('/updateTransaction/:transactionId', updateTransaction);
 router.delete('/deleteTransaction/:transactionId', deleteTransaction);
+router.get('/getTransactionGraphData/:userId', getTransactionGraphData);
 
 module.exports = router;

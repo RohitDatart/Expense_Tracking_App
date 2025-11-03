@@ -202,4 +202,66 @@ const deleteTransaction = async (req, res) => {
   }
 };
 
-module.exports = {addTransaction, getTransactions, getSingleTransaction, updateTransaction, deleteTransaction}
+const getTransactionGraphData = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { year } = req.query; 
+
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    // --- Get all transactions for the selected year ---
+    const selectedYear = year ? parseInt(year) : new Date().getFullYear();
+    const startOfYear = new Date(selectedYear, 0, 1);
+    const endOfYear = new Date(selectedYear + 1, 0, 1);
+
+    const transactions = await Transaction.find({
+      user: user._id,
+      date: { $gte: startOfYear, $lt: endOfYear },
+    });
+
+    // --- Pie Chart: Category totals (only expenses) ---
+    const categoryTotals = {};
+    transactions
+      .filter((t) => t.type === "expense")
+      .forEach((t) => {
+        const cat = t.category || "Uncategorized";
+        if (!categoryTotals[cat]) categoryTotals[cat] = 0;
+        categoryTotals[cat] += t.amount;
+      });
+
+    // --- Bar Chart: Monthly totals for income & expense ---
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+      month: months[i],
+      income: 0,
+      expense: 0,
+    }));
+
+    transactions.forEach((t) => {
+      const m = new Date(t.date).getMonth();
+      if (t.type === "income") monthlyData[m].income += t.amount;
+      else if (t.type === "expense") monthlyData[m].expense += t.amount;
+    });
+
+    // --- Final response ---
+    res.status(200).json({
+      success: true,
+      year: selectedYear,
+      data: {
+        pieChart: categoryTotals, // e.g. { Food & Dining: 215.5, Shopping: 200 }
+        barChart: monthlyData,   // e.g. [{month:'Jan',income:500,expense:300}]
+      },
+    });
+  } catch (error) {
+    console.error("Graph API error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = {addTransaction, getTransactions, getSingleTransaction, updateTransaction, deleteTransaction, getTransactionGraphData}
