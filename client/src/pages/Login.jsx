@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
-import Dashboard from "./Dashboard";
 import { DollarSign, Eye, EyeOff } from "lucide-react";
+import "./Login.css";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState("signin");
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ user_name: "", password: "" });
-  const [user, setUser] = useState(null);
+  const [form, setForm] = useState({ user_name: "", email: "", password: "", phone_number: "" });
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -15,113 +16,179 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const endpoint = mode === "signin" ? "/userLogin" : "/userSignup";
-      const res = await axiosInstance.post(endpoint, form);
-      if (res.data?.user) setUser(res.data.user);
-      else alert("Invalid credentials");
-    } catch {
-      alert("Login failed");
+      let endpoint = "";
+      let payload = {};
+
+      if (mode === "signin") {
+        // LOGIN
+        endpoint = "/userLogin";
+        payload = {
+          user_name: form.user_name,
+          password: form.password,
+        };
+      } else {
+        // SIGNUP
+        endpoint = "/crate_user";
+        payload = {
+          ...form,
+          reaming_balance: 0,  // Matches your backend response format
+        };
+      }
+
+      const res = await axiosInstance.post(endpoint, payload);
+
+      let userData = null;
+
+      if (mode === "signin") {
+        // For login: Expect direct user object
+        if (res.data?._id) {
+          userData = res.data;
+        }
+      } else {
+        // For signup: Expect {status: true, message: "..."}
+        if (res.data?.status === true) {
+          // Auto-login after successful signup to get user object
+          const loginRes = await axiosInstance.post("/userLogin", {
+            user_name: form.user_name,
+            password: form.password,
+          });
+          if (loginRes.data?._id) {
+            userData = loginRes.data;
+          }
+        }
+      }
+
+      if (userData) {
+        // Store user in localStorage for persistence across sessions
+        localStorage.setItem("user", JSON.stringify(userData));
+        navigate("/dashboard");
+      } else {
+        alert("Invalid credentials");
+      }
+    } catch (error) {
+      console.log(error);
+      alert("Request failed");
     }
   };
 
-  const handleLogout = () => setUser(null);
-
-  if (user) return <Dashboard user={user} onLogout={handleLogout} />;
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100">
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex justify-center mb-4">
-          <div className="bg-indigo-600 text-white p-3 rounded-full">
-            <DollarSign size={28} />
-          </div>
-        </div>
-
-        {/* Header */}
-        <h2 className="text-center text-xl font-semibold">
-          Finance Dashboard
-        </h2>
-        <p className="text-center text-gray-500 mb-6 text-sm">
-          Manage your finances with ease
-        </p>
-
-        {/* SignIn/SignUp Toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
-          <button
-            type="button"
-            className={`w-1/2 py-2 text-sm font-medium rounded-md ${
-              mode === "signin" ? "bg-white shadow" : "text-gray-500"
-            }`}
-            onClick={() => setMode("signin")}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            className={`w-1/2 py-2 text-sm font-medium rounded-md ${
-              mode === "signup" ? "bg-white shadow" : "text-gray-500"
-            }`}
-            onClick={() => setMode("signup")}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* USERNAME */}
-          <div>
-            <label className="block text-sm font-medium mb-1">User</label>
-            <input
-              type="text"
-              name="user_name"
-              value={form.user_name}
-              onChange={handleChange}
-              placeholder="Enter username"
-              required
-              className="w-full border border-gray-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* PASSWORD */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium">Password</label>
-              {/* <a href="#" className="text-xs text-indigo-600 hover:underline">
-                Forgot password?
-              </a> */}
+    <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+      <div className="card shadow-lg border-0" style={{ maxWidth: "400px", width: "100%" }}>
+        <div className="card-body p-4">
+          {/* Logo */}
+          <div className="d-flex justify-content-center mb-4">
+            <div className="bg-primary text-white p-3 rounded-circle" style={{ width: "60px", height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <DollarSign size={28} />
             </div>
-            <div className="relative">
+          </div>
+
+          {/* Header */}
+          <h2 className="text-center mb-1 fw-semibold">Expense Dashboard</h2>
+          <p className="text-center text-muted mb-4 small">
+            Manage your finances with ease
+          </p>
+
+          {/* SignIn/SignUp Toggle */}
+          <div className="d-flex bg-light rounded-pill p-1 mb-4">
+            <button
+              type="button"
+              className={`flex-fill py-2 border-0 rounded-pill text-sm fw-medium ${mode === "signin" ? "bg-white shadow-sm text-primary" : "text-muted bg-transparent"}`}
+              onClick={() => setMode("signin")}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              className={`flex-fill py-2 border-0 rounded-pill text-sm fw-medium ${mode === "signup" ? "bg-white shadow-sm text-primary" : "text-muted bg-transparent"}`}
+              onClick={() => setMode("signup")}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label className="form-label small fw-medium">Username</label>
               <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={form.password}
+                type="text"
+                name="user_name"
+                value={form.user_name}
                 onChange={handleChange}
-                placeholder="Enter password"
+                placeholder="Enter username"
                 required
-                className="w-full border border-gray-200 rounded-md p-2 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="form-control"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-gray-500"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            className="w-full bg-black text-white py-2 rounded-md font-medium hover:bg-gray-800"
-          >
-            {mode === "signin" ? "Sign In" : "Sign Up"}
-          </button>
-        </form>
-        <p className="text-center text-xs text-gray-500 mt-6">
-          Demo: Use any credentials to sign in
-        </p>
+            {/* EMAIL - Only for signup */}
+            {mode === "signup" && (
+              <div className="mb-3">
+                <label className="form-label small fw-medium">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="Enter email"
+                  required
+                  className="form-control"
+                />
+              </div>
+            )}
+
+            {/* PHONE - Only for signup */}
+            {mode === "signup" && (
+              <div className="mb-3">
+                <label className="form-label small fw-medium">Phone No</label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={form.phone_number}
+                  onChange={handleChange}
+                  placeholder="Enter phone number"
+                  required
+                  className="form-control"
+                />
+              </div>
+            )}
+
+            {/* PASSWORD */}
+            <div className="mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <label className="form-label small fw-medium">Password</label>
+              </div>
+              <div className="position-relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Enter password"
+                  required
+                  className="form-control pe-5"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="position-absolute end-0 top-50 translate-middle-y pe-3 text-muted border-0 bg-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-dark w-100 mb-2"
+            >
+              {mode === "signin" ? "Log In" : "Sign Up"}
+            </button>
+          </form>
+          {/* <p className="text-center text-muted small mt-3 mb-0">
+            Demo: Use any credentials to sign in
+          </p> */}
+        </div>
       </div>
     </div>
   );
