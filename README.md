@@ -66,8 +66,8 @@ project-root/
 ## ⚙️ Setup Instructions
 
 ### 1️⃣ Clone the Repository
-git clone https://github.com/yourusername/expense-tracker.git
-cd expense-tracker
+git clone https://github.com/RohitDC45/Expense_Tracking_App.git
+cd Expense_Tracking_App
 
 ---
 
