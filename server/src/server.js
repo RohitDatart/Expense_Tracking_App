@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 
@@ -11,7 +12,7 @@ const routers = require('./routes/routers');
 app.use(express.json());
 
 mongoose
-.connect("mongodb+srv://Vishwas:nqcBwAeYJgFrjkND@cluster0.vzfnwmk.mongodb.net/Expense_tracker")
+.connect(process.env.MongoDB_string)
   .then(() => console.log("MongoDB is connected"))
   .catch((err) => console.log(err));
 
